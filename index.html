@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Şanslıyı Seç</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background: #f8f9fa;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        padding: 20px 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      }
+      #wheel-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        margin: 20px auto;
+      }
+      #wheelCanvas {
+        width: 100%;
+        height: auto;
+        transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);
+        border-radius: 50%;
+        border: 6px solid #fff;
+      }
+      .pointer {
+        position: absolute;
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 20px solid transparent;
+        border-right: 20px solid transparent;
+        border-top: 45px solid #dc3545;
+        z-index: 100;
+      }
+      .name-badge {
+        cursor: pointer;
+        transition: 0.2s;
+        margin-bottom: 5px;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      .name-badge:hover {
+        background-color: #dc3545 !important;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row justify-content-center g-4">
+        <div class="col-12 col-lg-4">
+          <div class="card p-4">
+            <h4 class="mb-3 fw-bold text-dark">👥 Katılımcılar</h4>
+            <div class="input-group mb-3">
+              <input
+                type="text"
+                id="nameInput"
+                class="form-control"
+                placeholder="İsim ekle..."
+                onkeypress="if(event.key==='Enter') addName()"
+              />
+              <button class="btn btn-dark" onclick="addName()">Ekle</button>
+            </div>
+            <div id="nameList" class="d-flex flex-wrap gap-2 mb-3">
+              <em class="text-muted small">Henüz kimse eklenmedi...</em>
+            </div>
+            <hr />
+            <div class="alert alert-light border small text-muted">
+              ✍️ Herkesin ismini sırayla ekleyin. Silmek istediğiniz ismin
+              üzerine tıklayın.
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6 text-center">
+          <div class="card p-4">
+            <div id="wheel-container">
+              <div class="pointer"></div>
+              <canvas id="wheelCanvas" width="800" height="800"></canvas>
+            </div>
+            <button
+              id="spinBtn"
+              class="btn btn-primary btn-lg mt-3 w-100 fw-bold"
+              onclick="spinWheel()"
+              disabled
+            >
+              🎲 ÇARKI ÇEVİR
+            </button>
+            <h2 id="winnerDisplay" class="mt-4 fw-bold"></h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let names = [];
+      const colors = [
+        "#2c3e50",
+        "#34495e",
+        "#2980b9",
+        "#16a085",
+        "#27ae60",
+        "#f39c12",
+        "#d35400",
+        "#c0392b",
+        "#8e44ad",
+      ];
+      const canvas = document.getElementById("wheelCanvas");
+      const ctx = canvas.getContext("2d");
+      let totalDeg = 0;
+
+      function addName() {
+        const input = document.getElementById("nameInput");
+        const name = input.value.trim();
+        if (name) {
+          names.push(name);
+          input.value = "";
+          updateUI();
+        }
+      }
+
+      function removeName(index) {
+        names.splice(index, 1);
+        updateUI();
+      }
+
+      function updateUI() {
+        const list = document.getElementById("nameList");
+        const btn = document.getElementById("spinBtn");
+
+        if (names.length === 0) {
+          list.innerHTML =
+            '<em class="text-muted small">Henüz kimse eklenmedi...</em>';
+          btn.disabled = true;
+        } else {
+          list.innerHTML = "";
+          names.forEach((n, i) => {
+            list.innerHTML += `<span class="badge bg-white text-dark border name-badge p-2" onclick="removeName(${i})">${n} ×</span>`;
+          });
+          btn.disabled = names.length < 2;
+        }
+        drawWheel();
+      }
+
+      function drawWheel() {
+        const numSegments = names.length;
+        ctx.clearRect(0, 0, 800, 800);
+        if (numSegments === 0) return;
+
+        const arc = (Math.PI * 2) / numSegments;
+        names.forEach((name, i) => {
+          const angle = i * arc;
+          ctx.beginPath();
+          ctx.fillStyle = colors[i % colors.length];
+          ctx.moveTo(400, 400);
+          ctx.arc(400, 400, 400, angle, angle + arc);
+          ctx.lineTo(400, 400);
+          ctx.fill();
+
+          ctx.save();
+          ctx.translate(400, 400);
+          ctx.rotate(angle + arc / 2);
+          ctx.textAlign = "right";
+          ctx.fillStyle = "white";
+          ctx.font = "bold 30px Arial";
+          ctx.fillText(name, 350, 10);
+          ctx.restore();
+        });
+      }
+
+      function spinWheel() {
+        const btn = document.getElementById("spinBtn");
+        btn.disabled = true;
+
+        // CANER SAVAR ALGORİTMASI
+        let eligibleIndices = [];
+        names.forEach((name, idx) => {
+          // "Caner" ismini içeren hiçbir varyasyonu seçme
+          if (name.toLowerCase() !== "caner") {
+            eligibleIndices.push(idx);
+          }
+        });
+
+        // Eğer listede sadece Caner varsa veya Caner yoksa adil davran
+        if (eligibleIndices.length === 0) {
+          names.forEach((_, idx) => eligibleIndices.push(idx));
+        }
+
+        const targetIndex =
+          eligibleIndices[Math.floor(Math.random() * eligibleIndices.length)];
+        const segmentDeg = 360 / names.length;
+        const extraTurns = (5 + Math.floor(Math.random() * 5)) * 360;
+        const stopAngle = 360 - targetIndex * segmentDeg - segmentDeg / 2 - 90;
+
+        totalDeg += extraTurns + ((stopAngle - (totalDeg % 360) + 360) % 360);
+
+        canvas.style.transform = `rotate(${totalDeg}deg)`;
+        document.getElementById("winnerDisplay").innerText =
+          "Sonuç bekleniyor...";
+
+        setTimeout(() => {
+          btn.disabled = false;
+          document.getElementById("winnerDisplay").className =
+            "mt-4 fw-bold text-success animate-bounce";
+          document.getElementById("winnerDisplay").innerText =
+            "🏆 KAZANAN: " + names[targetIndex].toUpperCase();
+        }, 4000);
+      }
+
+      // İlk çizimi yap
+      drawWheel();
+    </script>
+  </body>
+</html>
